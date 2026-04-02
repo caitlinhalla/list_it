@@ -1,0 +1,21 @@
+# Elixir
+backend/_build/
+backend/deps/
+backend/*.ez
+backend/.elixir_ls/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Docker
+docker-data/
+
+# OS
+.DS_Store
+*.swp
+
+# Env
+.env
+.env.local

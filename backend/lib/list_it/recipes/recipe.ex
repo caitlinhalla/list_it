@@ -14,7 +14,7 @@ defmodule ListIt.Recipes.Recipe do
     field :prep_time, :string
     field :cook_time, :string
     has_many :ingredients, ListIt.Recipes.Ingredient
-    timestamps(type: :utc_datetime)
+    timestamps(type: :utc_datetime_usec)
   end
 
   def changeset(recipe, attrs) do

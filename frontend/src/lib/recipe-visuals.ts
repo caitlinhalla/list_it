@@ -32,6 +32,6 @@ export function recipeVisual(title: string): RecipeVisual {
   const lightBottom = 48;
   const background = `linear-gradient(135deg, hsl(${hueDeg} ${sat}% ${lightTop}%), hsl(${hueDeg} ${sat}% ${lightBottom}%))`;
   const ring = `hsl(${hueDeg} ${sat}% ${lightBottom}%)`;
-  const emoji = EMOJIS[(h >> 8) % EMOJIS.length];
+  const emoji = EMOJIS[(h >>> 8) % EMOJIS.length];
   return { hueDeg, background, ring, emoji };
 }

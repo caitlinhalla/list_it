@@ -58,8 +58,10 @@ const KEYWORDS: Record<AisleKey, string[]> = {
 
 export function classifyAisle(name: string): AisleKey {
   const n = name.toLowerCase().trim();
-  // frozen first so "frozen peas" wins over "pea" in produce
-  for (const aisle of ["frozen", "meat", "dairy", "produce"] as AisleKey[]) {
+  // Order across categories matters — first match wins.
+  // frozen first so "frozen peas" beats "pea" in produce.
+  // produce before dairy so "eggplant" beats "egg" and "butter lettuce" beats "butter".
+  for (const aisle of ["frozen", "meat", "produce", "dairy"] as AisleKey[]) {
     for (const kw of KEYWORDS[aisle]) {
       if (n.includes(kw)) return aisle;
     }

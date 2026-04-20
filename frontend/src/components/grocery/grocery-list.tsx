@@ -1,165 +1,231 @@
+import { useState } from "react";
+import { AnimatePresence } from "framer-motion";
+import { RotateCcw, Share2, CheckCircle2 } from "lucide-react";
+
 import { useGroceryList, useUncheckAll } from "@/hooks/use-grocery";
 import { useAppStore } from "@/stores/app-store";
 import { convertGroceryList } from "@/lib/unit-conversion";
+import { AISLES, classifyAisle, type AisleKey } from "@/lib/aisle-classifier";
+
 import { GroceryItem } from "./grocery-item";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
-import {
-  ShoppingBasket,
-  RotateCcw,
-  CheckCircle2,
-  Scale,
-} from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { Display } from "@/components/ui/display";
+
+type Grouping = "aisle" | "recipe" | "az";
+
+function weekOf(): string {
+  const now = new Date();
+  const day = now.getDay(); // 0 = Sunday ... 6 = Saturday
+  const diffToMonday = (day + 6) % 7; // Monday is week start
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - diffToMonday);
+  return monday.toLocaleDateString(undefined, { month: "long", day: "numeric" });
+}
 
 export function GroceryList() {
   const { data: rawItems, isLoading, error } = useGroceryList();
   const uncheckAll = useUncheckAll();
   const { unitPreference, setUnitPreference } = useAppStore();
 
-  const items = rawItems
-    ? convertGroceryList(rawItems, unitPreference)
-    : [];
+  const [grouping, setGrouping] = useState<Grouping>("aisle");
 
-  const uncheckedItems = items.filter((i) => !i.checked);
-  const checkedItems = items.filter((i) => i.checked);
+  const items = rawItems ? convertGroceryList(rawItems, unitPreference) : [];
   const totalItems = items.length;
-  const checkedCount = checkedItems.length;
+  const checkedCount = items.filter((i) => i.checked).length;
+
+  // Bucket by aisle for grouping=aisle; for the other two, render as a single bucket.
+  const groupedByAisle: Record<AisleKey, typeof items> = {
+    produce: [], meat: [], dairy: [], pantry: [], frozen: [],
+  };
+  for (const it of items) {
+    groupedByAisle[classifyAisle(it.name)].push(it);
+  }
+
+  const alphaSorted = [...items].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="flex flex-col gap-4 p-4 md:p-0">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 p-5 md:p-10">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">
-            Grocery List
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {totalItems > 0
-              ? `${checkedCount}/${totalItems} items checked`
-              : "Items appear as you add recipes"}
-          </p>
+          <Eyebrow>Grocery list · Week of {weekOf()}</Eyebrow>
+          <Display size="md" className="mt-2">
+            <span>Your recipes, </span>
+            <em className="italic text-olive">one list</em>
+            <span>.</span>
+          </Display>
         </div>
-        {checkedCount > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => uncheckAll.mutate()}
-            disabled={uncheckAll.isPending}
+        <div className="flex gap-2">
+          {checkedCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => uncheckAll.mutate()}
+              disabled={uncheckAll.isPending}
+              className="rounded-full"
+            >
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+              Reset
+            </Button>
+          )}
+          <button
+            type="button"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface text-text-2"
+            aria-label="Share list"
           >
-            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-            Reset
-          </Button>
-        )}
+            <Share2 className="h-4 w-4" strokeWidth={1.6} />
+          </button>
+        </div>
       </div>
 
-      {/* Unit preference toggle */}
+      {/* Progress bar + counter */}
       {totalItems > 0 && (
-        <div className="flex items-center gap-2">
-          <Scale className="h-4 w-4 text-muted-foreground" />
-          <div className="inline-flex rounded-lg border border-border">
-            <button
-              onClick={() => setUnitPreference("imperial")}
-              className={`px-3 py-1 text-xs font-medium transition-colors rounded-l-lg ${
-                unitPreference === "imperial"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Imperial
-            </button>
-            <button
-              onClick={() => setUnitPreference("metric")}
-              className={`px-3 py-1 text-xs font-medium transition-colors rounded-r-lg ${
-                unitPreference === "metric"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Metric
-            </button>
+        <div className="flex items-center gap-3">
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-line-2">
+            <div
+              className="h-full rounded-full bg-olive transition-[width] duration-500 ease-out"
+              style={{ width: `${(checkedCount / totalItems) * 100}%` }}
+            />
+          </div>
+          <span className="font-mono text-xs text-text-3">
+            {checkedCount}/{totalItems}
+          </span>
+        </div>
+      )}
+
+      {/* Grouping toggle */}
+      {totalItems > 0 && (
+        <div className="flex items-center justify-between gap-4">
+          <div className="inline-flex items-center gap-1 rounded-full border border-line bg-surface p-1">
+            {(
+              [
+                ["aisle", "Aisle"],
+                ["recipe", "Recipe"],
+                ["az", "A–Z"],
+              ] as const
+            ).map(([k, l]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setGrouping(k)}
+                className={
+                  grouping === k
+                    ? "rounded-full bg-ink px-3.5 py-1.5 text-xs font-medium text-paper"
+                    : "rounded-full px-3.5 py-1.5 text-xs font-medium text-text-2"
+                }
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+
+          {/* Unit preference toggle — keeps existing feature */}
+          <div className="inline-flex items-center gap-1 rounded-full border border-line bg-surface p-1">
+            {(["imperial", "metric"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setUnitPreference(p)}
+                className={
+                  unitPreference === p
+                    ? "rounded-full bg-ink px-3.5 py-1.5 text-xs font-medium text-paper"
+                    : "rounded-full px-3.5 py-1.5 text-xs font-medium text-text-2"
+                }
+              >
+                {p === "imperial" ? "Imperial" : "Metric"}
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Progress bar */}
-      {totalItems > 0 && (
-        <div className="h-2 overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
-            style={{
-              width: `${(checkedCount / totalItems) * 100}%`,
-            }}
-          />
-        </div>
-      )}
-
+      {/* Loading */}
       {isLoading && (
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-10 w-full rounded-lg" />
+            <Skeleton key={i} className="h-12 w-full rounded-xl" />
           ))}
         </div>
       )}
 
+      {/* Error */}
       {error && (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           Failed to load grocery list: {error.message}
         </div>
       )}
 
+      {/* Empty */}
       {!isLoading && totalItems === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-dashed border-border py-10 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <ShoppingBasket className="h-6 w-6" />
-          </div>
-          <div>
-            <p className="font-medium text-foreground">
-              Your list is empty
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Add some recipes to auto-generate your grocery list
-            </p>
-          </div>
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-line bg-surface/60 py-12 text-center">
+          <div className="text-3xl">🧺</div>
+          <div className="serif text-xl text-text">Nothing on the list yet.</div>
+          <p className="text-sm text-text-3">
+            Add recipes and ingredients will roll up here, grouped by aisle.
+          </p>
         </div>
       )}
 
       {/* All done celebration */}
       {totalItems > 0 && checkedCount === totalItems && (
-        <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-3 text-sm font-medium text-primary">
+        <div className="flex items-center gap-2 rounded-xl bg-accent-wash px-4 py-3 text-sm font-medium text-accent-ink">
           <CheckCircle2 className="h-5 w-5" />
-          All items checked off — you're all set!
+          Everything checked — you're all set.
         </div>
       )}
 
-      {/* Unchecked items */}
-      <AnimatePresence mode="popLayout">
-        {uncheckedItems.map((item) => (
-          <GroceryItem
-            key={`${item.name}-${item.displayUnit}`}
-            item={item}
-          />
-        ))}
-      </AnimatePresence>
-
-      {/* Checked items section */}
-      {checkedItems.length > 0 && uncheckedItems.length > 0 && (
-        <>
-          <Separator />
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Checked ({checkedItems.length})
-          </p>
-        </>
+      {/* Grouping: AISLE */}
+      {totalItems > 0 && grouping === "aisle" && (
+        <div className="flex flex-col gap-4">
+          {AISLES.filter((a) => groupedByAisle[a.key].length > 0).map((aisle) => (
+            <section key={aisle.key} className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 px-1">
+                <span className="text-base">{aisle.icon}</span>
+                <Eyebrow>{aisle.label}</Eyebrow>
+                <span className="font-mono text-[11px] text-text-3">
+                  · {groupedByAisle[aisle.key].length}
+                </span>
+              </div>
+              <div className="overflow-hidden rounded-2xl border border-line bg-surface">
+                <AnimatePresence initial={false}>
+                  {groupedByAisle[aisle.key].map((item, idx, arr) => (
+                    <GroceryItem
+                      key={`${item.name}-${item.displayUnit}`}
+                      item={item}
+                      divider={idx < arr.length - 1}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+            </section>
+          ))}
+        </div>
       )}
 
-      <AnimatePresence mode="popLayout">
-        {checkedItems.map((item) => (
-          <GroceryItem
-            key={`${item.name}-${item.displayUnit}`}
-            item={item}
-          />
-        ))}
-      </AnimatePresence>
+      {/* Grouping: A–Z (flat list) */}
+      {totalItems > 0 && grouping === "az" && (
+        <div className="overflow-hidden rounded-2xl border border-line bg-surface">
+          <AnimatePresence initial={false}>
+            {alphaSorted.map((item, idx, arr) => (
+              <GroceryItem
+                key={`${item.name}-${item.displayUnit}`}
+                item={item}
+                divider={idx < arr.length - 1}
+              />
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Grouping: RECIPE — not implemented */}
+      {totalItems > 0 && grouping === "recipe" && (
+        <div className="rounded-2xl border border-dashed border-line bg-surface/60 p-6 text-sm text-text-3">
+          Recipe grouping is coming once <code className="font-mono">/api/grocery</code> exposes
+          per-ingredient recipe breakdowns.
+        </div>
+      )}
     </div>
   );
 }

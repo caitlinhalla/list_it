@@ -287,7 +287,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   return (
     <div>
       <div className="px-5 pt-5">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F4E4D3] px-2.5 py-1 text-[12px] font-medium text-[#8C4F20]">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-blush px-2.5 py-1 text-[12px] font-medium text-terracotta-ink">
           <span className="h-1.5 w-1.5 rounded-full bg-terracotta" />
           Couldn't auto-parse
         </span>

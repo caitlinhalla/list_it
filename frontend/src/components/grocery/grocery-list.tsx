@@ -15,6 +15,15 @@ import { Display } from "@/components/ui/display";
 
 type Grouping = "aisle" | "recipe" | "az";
 
+function weekOf(): string {
+  const now = new Date();
+  const day = now.getDay(); // 0 = Sunday ... 6 = Saturday
+  const diffToMonday = (day + 6) % 7; // Monday is week start
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - diffToMonday);
+  return monday.toLocaleDateString(undefined, { month: "long", day: "numeric" });
+}
+
 export function GroceryList() {
   const { data: rawItems, isLoading, error } = useGroceryList();
   const uncheckAll = useUncheckAll();
@@ -41,7 +50,7 @@ export function GroceryList() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Eyebrow>Grocery list · Week of April 14</Eyebrow>
+          <Eyebrow>Grocery list · Week of {weekOf()}</Eyebrow>
           <Display size="md" className="mt-2">
             <span>Your recipes, </span>
             <em className="italic text-olive">one list</em>

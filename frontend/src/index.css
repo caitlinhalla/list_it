@@ -25,6 +25,7 @@
     --color-olive-ink: var(--olive-ink);
     --color-olive-wash: var(--olive-wash);
     --color-terracotta: var(--terracotta);
+    --color-terracotta-ink: var(--terracotta-ink);
     --color-blush: var(--blush);
     --color-sage: var(--sage);
 
@@ -82,6 +83,7 @@
     --olive-ink: #3A4724;
     --olive-wash: #E9ECDD;
     --terracotta: #C4683F;
+    --terracotta-ink: #8C4F20;
     --blush: #F0E4D8;
     --sage: #B8C09A;
 
